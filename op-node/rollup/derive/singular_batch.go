@@ -20,6 +20,18 @@ type SingularBatch struct {
 	EpochHash    common.Hash  // l1 block hash
 	Timestamp    uint64
 	Transactions []hexutil.Bytes
+
+	//Domicon Data
+	Commitment [50]byte
+	Signature  [64]byte
+}
+
+type BatchV1 struct {
+	ParentHash   common.Hash  // parent L2 block hash
+	EpochNum     rollup.Epoch // aka l1 num
+	EpochHash    common.Hash  // l1 block hash
+	Timestamp    uint64
+	Transactions []hexutil.Bytes
 }
 
 // GetBatchType returns its batch type (batch_version)

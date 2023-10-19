@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"io"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
@@ -238,13 +239,24 @@ func BlockToBatch(block *types.Block) (*BatchData, L1BlockInfo, error) {
 		return nil, l1Info, fmt.Errorf("could not parse the L1 Info deposit: %w", err)
 	}
 
+	batch := BatchV1{
+		ParentHash:   block.ParentHash(),
+		EpochNum:     rollup.Epoch(l1Info.Number),
+		EpochHash:    l1Info.BlockHash,
+		Timestamp:    block.Time(),
+		Transactions: opaqueTxs,
+	}
+	commitment := GetCommitmentWithBatch(batch)
+	signature := GetSignatureWithBatch(batch)
 	return NewSingularBatchData(
 		SingularBatch{
-			ParentHash:   block.ParentHash(),
-			EpochNum:     rollup.Epoch(l1Info.Number),
-			EpochHash:    l1Info.BlockHash,
-			Timestamp:    block.Time(),
-			Transactions: opaqueTxs,
+			ParentHash:   batch.ParentHash,
+			EpochNum:     batch.EpochNum,
+			EpochHash:    batch.EpochHash,
+			Timestamp:    batch.Timestamp,
+			Transactions: batch.Transactions,
+			Commitment:   commitment,
+			Signature:    signature,
 		},
 	), l1Info, nil
 }
@@ -302,4 +314,25 @@ func ForceCloseTxData(frames []Frame) ([]byte, error) {
 	}
 
 	return out.Bytes(), nil
+}
+
+func GetCommitmentWithBatch(batch BatchV1) (res [50]byte) {
+	b, err := rlp.EncodeToBytes(batch)
+	if err != nil {
+		return
+	}
+	copy(res[50-len(b):], b[:])
+	return
+}
+
+func GetSignatureWithBatch(batch BatchV1) (res [64]byte) {
+	b, err := rlp.EncodeToBytes(batch)
+	if err != nil {
+		return
+	}
+	h1 := common.BytesToHash(b)
+	h2 := common.BytesToHash(h1.Bytes())
+	copy(res[:32], h1[:])
+	copy(res[32:], h2[:])
+	return
 }
