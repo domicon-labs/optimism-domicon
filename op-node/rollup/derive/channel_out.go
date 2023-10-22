@@ -321,7 +321,8 @@ func GetCommitmentWithBatch(batch BatchV1) (res [50]byte) {
 	if err != nil {
 		return
 	}
-	copy(res[50-len(b):], b[:])
+	hash := common.BytesToHash(b)
+	copy(res[50-len(hash):], b[:])
 	return
 }
 
